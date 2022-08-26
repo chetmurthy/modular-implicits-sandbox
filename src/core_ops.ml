@@ -142,19 +142,52 @@ end
   let zero () = ""
 end
 
-module type GEN_ITERATOR = sig
+module type BASIC_ITERATOR = sig
   type 'a item_t
   type 'a t
   val next : 'a t -> 'a item_t option
+end
+
+
+module type GEN_ITERATOR = sig
+  type 'a item_t
+  type 'a t
+  include BASIC_ITERATOR with type 'a t := 'a t and type 'a item_t := 'a item_t
   val size_hint : 'a t -> (int * int option)
   val count : 'a t -> int
   val last : 'a t -> 'a item_t option
   val advance_by : 'a t -> int -> (unit, int) Result.result
 end
 
+module FullIterator(I : BASIC_ITERATOR) : (GEN_ITERATOR with type 'a t = 'a I.t and type 'a item_t = 'a I.item_t) =
+  struct
+    open Result
+    include I
+    let size_hint _ = (0, None)
+    let count ii =
+      let rec crec n =
+        match I.next ii with
+          None -> n
+        | Some _ -> crec (n+1)
+      in crec 0
+    let last ii =
+      let rec lrec cur =
+        match I.next ii with
+          None -> cur
+        | Some v -> lrec (Some v)
+      in lrec None
+    let advance_by ii n  =
+      let rec arec cnt =
+        if cnt = n then Ok ()
+        else match I.next ii with
+               None -> Error cnt
+             | Some _ -> arec (cnt+1)
+      in arec 0
+  end
+
 type 'a vector_iterator_t = { it : 'a Vector.t ; mutable next : int }
 
-implicit module Gen_iterator_vector : (GEN_ITERATOR with type 'a item_t = 'a and
+module Gen_iterator_vector : (GEN_ITERATOR with type 'a item_t = 'a and
                                                          type 'a t = 'a vector_iterator_t) = struct
   type 'a item_t = 'a
   type 'a t = 'a vector_iterator_t

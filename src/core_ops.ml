@@ -142,24 +142,65 @@ end
   let zero () = ""
 end
 
-module type BASIC_ITERATOR = sig
+module type BASIC_GEN_ITERATOR = sig
   type 'a item_t
   type 'a t
   val next : 'a t -> 'a item_t option
 end
 
-
 module type GEN_ITERATOR = sig
   type 'a item_t
   type 'a t
-  include BASIC_ITERATOR with type 'a t := 'a t and type 'a item_t := 'a item_t
+  include BASIC_GEN_ITERATOR with type 'a t := 'a t and type 'a item_t := 'a item_t
   val size_hint : 'a t -> (int * int option)
   val count : 'a t -> int
   val last : 'a t -> 'a item_t option
   val advance_by : 'a t -> int -> (unit, int) Result.result
 end
 
-module FullIterator(I : BASIC_ITERATOR) : (GEN_ITERATOR with type 'a t = 'a I.t and type 'a item_t = 'a I.item_t) =
+module type BASIC_ITERATOR = sig
+  type item_t
+  type t
+  val next : t -> item_t option
+end
+
+module type ITERATOR = sig
+  type item_t
+  type t
+  include BASIC_ITERATOR with type t := t and type item_t := item_t
+  val size_hint : t -> (int * int option)
+  val count : t -> int
+  val last : t -> item_t option
+  val advance_by : t -> int -> (unit, int) Result.result
+end
+
+module FullGenIterator(I : BASIC_GEN_ITERATOR) : (GEN_ITERATOR with type 'a t = 'a I.t and type 'a item_t = 'a I.item_t) =
+  struct
+    open Result
+    include I
+    let size_hint _ = (0, None)
+    let count ii =
+      let rec crec n =
+        match I.next ii with
+          None -> n
+        | Some _ -> crec (n+1)
+      in crec 0
+    let last ii =
+      let rec lrec cur =
+        match I.next ii with
+          None -> cur
+        | Some v -> lrec (Some v)
+      in lrec None
+    let advance_by ii n  =
+      let rec arec cnt =
+        if cnt = n then Ok ()
+        else match I.next ii with
+               None -> Error cnt
+             | Some _ -> arec (cnt+1)
+      in arec 0
+  end
+
+module FullIterator(I : BASIC_ITERATOR) : (ITERATOR with type t = I.t and type item_t = I.item_t) =
   struct
     open Result
     include I
@@ -187,8 +228,8 @@ module FullIterator(I : BASIC_ITERATOR) : (GEN_ITERATOR with type 'a t = 'a I.t 
 
 type 'a vector_iterator_t = { it : 'a Vector.t ; mutable next : int }
 
-module Gen_iterator_vector : (GEN_ITERATOR with type 'a item_t = 'a and
-                                                         type 'a t = 'a vector_iterator_t) = struct
+module Basic_gen_iterator_vector : (BASIC_GEN_ITERATOR with type 'a item_t = 'a and
+                                                            type 'a t = 'a vector_iterator_t) = struct
   type 'a item_t = 'a
   type 'a t = 'a vector_iterator_t
   let next ii =
@@ -198,6 +239,12 @@ module Gen_iterator_vector : (GEN_ITERATOR with type 'a item_t = 'a and
         let v = Vector.get ii.it ii.next in
         ii.next <- 1 + ii.next ;
         Some v
+end
+
+module Gen_iterator_vector : (GEN_ITERATOR with type 'a item_t = 'a and
+                                                         type 'a t = 'a vector_iterator_t) = struct
+  include Basic_gen_iterator_vector
+
   let size_hint ii =
     let siz = (Vector.length ii.it) - ii.next in
     (siz, Some siz)
@@ -209,7 +256,7 @@ module Gen_iterator_vector : (GEN_ITERATOR with type 'a item_t = 'a and
     let siz = Vector.length ii.it in
     if ii.next == siz then None
     else let v = Vector.get ii.it (siz-1) in
-      ii.next <- siz ;
+ ii.next <- siz ;
       Some v
   open Result
   let advance_by ii n =
@@ -233,9 +280,22 @@ module type SUBSCRIPTABLE = sig
   val make : item_t -> item_t list -> t
 end
 
+module type ITERABLE = sig
+  type item_t
+  type t
+  module Iter : (ITERATOR with type item_t = item_t)
+  val iter : t -> Iter.t
+end
+
+let iter { I : ITERABLE } it = I.iter it
+
 module type ZERO_SUBSCRIPTABLE = sig
-    include SUBSCRIPTABLE
-    include ZERO with type t := item_t
+  type t
+  type item_t
+  type iterator_t
+  include SUBSCRIPTABLE with type item_t := item_t and type t := t
+  include ZERO with type t := item_t
+  include ITERABLE with type item_t := item_t and type t := t
 end
 
 let sub {M : SUBSCRIPTABLE} = M.sub
@@ -249,16 +309,40 @@ module GenVec = struct
   let make dummy l = Vector.of_list dummy l
 end
 
-implicit module Vec { C : ZERO } : (ZERO_SUBSCRIPTABLE with type item_t = C.t and type t = C.t GenVec.t) = struct
+module Vec (C : ZERO) : (ZERO_SUBSCRIPTABLE with type item_t = C.t and type t = C.t GenVec.t) = struct
   type item_t = C.t
   type t = item_t GenVec.t
   let zero () = C.zero ()
   let sub = GenVec.sub
   let make = GenVec.make
+  module Iter = struct
+    type item_t = C.t
+    type t = C.t Gen_iterator_vector.t
+    let next (ii : t) : C.t option = Gen_iterator_vector.next ii
+    let advance_by = Gen_iterator_vector.advance_by
+    let last = Gen_iterator_vector.last
+    let count = Gen_iterator_vector.count
+    let size_hint = Gen_iterator_vector.size_hint
+  end
+  type iterator_t = Iter.t
+  let iter v =
+    { it = v ; next = 0 }
 end
 
-implicit module IntItem = struct
-  type item_t = int
+implicit module IntVector = Vec(Zero_int)
+implicit module FloatVector = Vec(Zero_float)
+implicit module ComplexVector = Vec(Zero_complex)
+
+type string_iterator_t = { it : string ; mutable cur : int }
+
+module Basic_string_iterator : (BASIC_ITERATOR with type item_t = Char.t and type t = string_iterator_t) = struct
+  type item_t = Char.t
+  type t = string_iterator_t
+  let next ii =
+    if ii.cur = String.length ii.it then None
+    else let c = String.get ii.it ii.cur in
+         ii.cur <- 1 + ii.cur ;
+         Some c
 end
 
 implicit module Str : (ZERO_SUBSCRIPTABLE with type item_t = Char.t and type t = String.t) = struct
@@ -271,4 +355,9 @@ implicit module Str : (ZERO_SUBSCRIPTABLE with type item_t = Char.t and type t =
     let s = String.make slen dummy in
     List.iteri (fun i c -> String.set s i c)  l ;
     s
+  module Iter = FullIterator(Basic_string_iterator)
+  type iterator_t = Iter.t
+  let iter s =
+    { it = s ; cur = 0 }
 end
+

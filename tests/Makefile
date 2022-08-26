@@ -10,7 +10,7 @@ RM=rm
 
 LAUNCH=env TOP=$(TOP) $(TOP)/tools/LAUNCH
 OCAMLFIND=$(LAUNCH) ocamlfind
-PACKAGES := $(PACKAGES),oUnit,fmt,rresult
+PACKAGES := $(PACKAGES),oUnit,sandbox
 
 TESTS= \
 	core_test.byte \
@@ -34,11 +34,11 @@ test: $(TESTS:.byte=)
 
 core_test.byte: core_test.cmo
 	$(OCAMLFIND) ocamlc $(DEBUG) $(WARNERR) -package $(PACKAGES) \
-	-linkpkg $^ -o $@
+	-linkpkg -linkall $^ -o $@
 
 core_test.opt: core_test.cmx
 	$(OCAMLFIND) ocamlopt $(DEBUG) $(WARNERR) -package $(PACKAGES) \
-	-linkpkg $^ -o $@
+	-linkpkg -linkall $^ -o $@
 
 clean::
 	rm -f  *.ppo.*

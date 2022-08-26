@@ -1,0 +1,14 @@
+#use "topfind";;
+#require "result,vector";;
+#require "sandbox";;
+open Core_ops ;;
+
+
+
+
+(*
+;;; Local Variables: ***
+;;; mode:tuareg ***
+;;; End: ***
+
+*)

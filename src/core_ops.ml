@@ -440,14 +440,19 @@ implicit module RangeIterator = Range.Iter
 module type ITERATOR_COLLECT = sig
   module I : BASIC_ITERATOR
   module Z : (ZERO with type t = I.item_t)
-  val collect : I.t -> Z.t Vector.t
+  type 'a coll_t
+  val collect : I.t -> Z.t coll_t
 end
 
-module IteratorCollect (I : BASIC_ITERATOR) (Z : (ZERO with type t = I.item_t))
-     : (ITERATOR_COLLECT with module I = I and module Z = Z)
+let collect {S : ITERATOR_COLLECT} ii =
+  S.collect ii
+
+module IteratorCollectVector (I : BASIC_ITERATOR) (Z : (ZERO with type t = I.item_t))
+     : (ITERATOR_COLLECT with module I = I and module Z = Z and type 'a coll_t = 'a Vector.t)
   = struct
   module I = I
   module Z = Z
+  type 'a coll_t = 'a Vector.t
   let collect (ii : I.t) =
     let acc = Vector.create (Z.zero()) in
     let rec srec () = match I.next ii with
@@ -458,5 +463,17 @@ module IteratorCollect (I : BASIC_ITERATOR) (Z : (ZERO with type t = I.item_t))
     in srec () ; acc
 end
 
-let collect {S : ITERATOR_COLLECT} ii =
-  S.collect ii
+
+module IteratorCollectList (I : BASIC_ITERATOR) (Z : (ZERO with type t = I.item_t))
+     : (ITERATOR_COLLECT with module I = I and module Z = Z and type 'a coll_t = 'a list)
+  = struct
+  module I = I
+  module Z = Z
+  type 'a coll_t = 'a list
+  let collect (ii : I.t) =
+    let rec srec revacc = match I.next ii with
+        None -> List.rev revacc
+      | Some v ->
+         srec (v::revacc)
+    in srec []
+end

@@ -4,12 +4,12 @@
 open Core_ops ;;
 
 implicit module F = FilterIterator(IntVectorIterator) ;;
-implicit module M = MapIterator (TYPEint)(TYPEint)(F) ;;
+implicit module M = MapIterator (Ops_int)(Ops_int)(F) ;;
 implicit module IS = IteratorSum(M)(Ops_int);;
 implicit module RS = IteratorSum(RangeIterator)(Ops_int) ;;
 implicit module RCV = IteratorCollectVector(RangeIterator)(Ops_int) ;;
 implicit module RCL = IteratorCollectList(RangeIterator)(Ops_int) ;;
-implicit module RF = IteratorFold(TYPEint)(TYPEint)(RangeIterator) ;;
+implicit module RF = IteratorFold(Ops_int)(Ops_int)(RangeIterator) ;;
 
 let v = make [1;2;3;4;5;6];;
 let ii = iter v;;

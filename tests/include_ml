@@ -7,11 +7,8 @@ let v = make [1;2;3];;
 let ii = iter v;;
 implicit module M = MapIterator (TYPEint)(TYPEint)(IntVectorIterator) ;;
 let m = map ii (fun x -> x);;
-M.next m ;;
-M.next m ;;
-M.next m ;;
-M.next m ;;
-
+implicit module IS = IteratorSum(M)(Ops_int);;
+sum m ;;
 
 
 (*

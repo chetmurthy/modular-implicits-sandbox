@@ -41,104 +41,39 @@ end
 
 let neg { M : NEG} = M.neg
 
-implicit module Add_int : (ADD with type t = int) = struct
+implicit module Ops_int = struct
   type t = int
   let (+) x y = Pervasives.(+) x y
-end
-
-implicit module Sub_int : (SUB with type t = int) = struct
-  type t = int
   let (-) x y = Pervasives.(-) x y
-end
-
-implicit module Mul_int : (MUL with type t = int) = struct
-  type t = int
   let ( * ) x y = Pervasives.( * ) x y
-end
-
-implicit module Div_int : (DIV with type t = int) = struct
-  type t = int
   let ( / ) x y = Pervasives.( / ) x y
-end
-
-implicit module Zero_int : (ZERO with type t = int) = struct
-  include Add_int
   let zero () = 0
-end
-
-implicit module Neg_int : (NEG with type t = int) = struct
-  include Add_int
   let neg n = -n
 end
 
-implicit module Add_float : (ADD with type t = float) = struct
+implicit module Ops_float = struct
   type t = float
   let (+) x y = x +. y
-end
-
-implicit module Sub_float : (SUB with type t = float) = struct
-  type t = float
   let (-) x y = x -. y
-end
-
-implicit module Mul_float : (MUL with type t = float) = struct
-  type t = float
   let ( * ) x y = x *. y
-end
-
-implicit module Div_float : (DIV with type t = float) = struct
-  type t = float
   let ( / ) x y = x /. y
-end
-
-implicit module Zero_float : (ZERO with type t = float) = struct
-  include Add_float
   let zero () = 0.
-end
-
-implicit module Neg_float : (NEG with type t = float) = struct
-  include Add_float
   let neg n = -. n
 end
 
-implicit module Add_complex : (ADD with type t = Complex.t) = struct
+implicit module Ops_complex = struct
   type t = Complex.t
   let (+) x y = Complex.add x y
-end
-
-implicit module Sub_complex : (SUB with type t = Complex.t) = struct
-  type t = Complex.t
   let (-) x y = Complex.sub x y
-end
-
-implicit module Mul_complex : (MUL with type t = Complex.t) = struct
-  type t = Complex.t
   let ( * ) x y = Complex.mul x y
-end
-
-implicit module Div_complex : (DIV with type t = Complex.t) = struct
-  type t = Complex.t
   let ( / ) x y = Complex.div x y
-end
-
- implicit module Zero_complex : (ZERO with type t = Complex.t) = struct
-  include Add_complex
   let zero () = Complex.zero
-end
-
-implicit module Neg_complex : (NEG with type t = Complex.t) = struct
-  include Add_complex
   let neg n = Complex.neg n
 end
 
-
-implicit module Add_string : (ADD with type t = String.t) = struct
+implicit module Ops_string = struct
   type t = String.t
   let (+) x y =  x^y
-end
-
- implicit module Zero_string : (ZERO with type t = String.t) = struct
-  include Add_string
   let zero () = ""
 end
 
@@ -329,9 +264,9 @@ module Vec (C : ZERO) : (ZERO_SUBSCRIPTABLE with type item_t = C.t and type t = 
     { it = v ; next = 0 }
 end
 
-implicit module IntVector = Vec(Zero_int)
-implicit module FloatVector = Vec(Zero_float)
-implicit module ComplexVector = Vec(Zero_complex)
+implicit module IntVector = Vec(Ops_int)
+implicit module FloatVector = Vec(Ops_float)
+implicit module ComplexVector = Vec(Ops_complex)
 
 implicit module IntVectorIterator = IntVector.Iter
 implicit module FlaotVectorIterator = FloatVector.Iter
@@ -415,3 +350,29 @@ module MapIterator (DOM : TYPE)(RNG : TYPE)(I : (BASIC_ITERATOR with type item_t
 
 let map {M : MAP_ITERATOR} (ii : M.I.t) (f : M.dom_t -> M.rng_t) =
   M.make ii f
+
+module type ADD_ZERO = sig
+  include ADD
+  include (ZERO with type t := t)
+end
+
+module type ITERATOR_SUM = sig
+  module I : BASIC_ITERATOR
+  module A : (ADD_ZERO with type t = I.item_t)
+  val sum : I.t -> A.t
+end
+
+module IteratorSum (I : BASIC_ITERATOR) (A : (ADD_ZERO with type t = I.item_t))
+     : (ITERATOR_SUM with module I = I and module A = A)
+  = struct
+  module I = I
+  module A = A
+  let sum (ii : I.t) =
+    let rec srec acc = match I.next ii with
+        None -> acc
+      | Some v -> srec (A.( + ) acc v)
+    in srec (A.zero())
+end
+
+let sum {S : ITERATOR_SUM} ii =
+  S.sum ii

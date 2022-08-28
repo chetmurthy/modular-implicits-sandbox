@@ -15,7 +15,10 @@ let m = map ii2 (fun x -> x * 2 );;
 implicit module IS = IteratorSum(M)(Ops_int);;
 sum m ;;
 
-
+let r = Range.make 0 10 ;;
+let ii = iter {Range} r ;;
+implicit module RS = IteratorSum(RangeIterator)(Ops_int) ;;
+sum ii ;;
 (*
 ;;; Local Variables: ***
 ;;; mode:tuareg ***

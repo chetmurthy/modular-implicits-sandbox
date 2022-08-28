@@ -269,7 +269,8 @@ implicit module FloatVector = Vec(Ops_float)
 implicit module ComplexVector = Vec(Ops_complex)
 
 implicit module IntVectorIterator = IntVector.Iter
-implicit module FlaotVectorIterator = FloatVector.Iter
+implicit module FloatVectorIterator = FloatVector.Iter
+implicit module ComplexVectorIterator = ComplexVector.Iter
 
 type string_iterator_t = { it : string ; mutable cur : int }
 
@@ -405,3 +406,33 @@ module FilterIterator(I : BASIC_ITERATOR)
 
 let filter {F : FILTER_ITERATOR} (ii : F.I.t) (pred : F.item_t -> bool) =
   F.make ii pred
+
+implicit module Range = struct
+  type t = { _start : int ;
+             _end : int ;
+             _end_inclusive : bool }
+  type item_t = int
+
+  type range_t = t
+  let make ?(end_inclusive=false) st en =
+    { _start = st ; _end = en ; _end_inclusive = end_inclusive }
+
+  module BasicIter = struct
+    type item_t = int
+    type t = { it : range_t ; mutable next : int }
+    let next (ii : t) : int option =
+      let rng = ii.it in
+      if (if rng._end_inclusive then ii.next > rng._end
+          else  ii.next >= rng._end) then
+        None
+      else let rv = ii.next in
+           ii.next <- 1 + ii.next ;
+           Some rv
+  end
+  module Iter = FullIterator(BasicIter)
+  type iterator_t = Iter.t
+  let iter (v : range_t) =
+    BasicIter.{ it = v ; next = v._start }
+end
+
+implicit module RangeIterator = Range.Iter

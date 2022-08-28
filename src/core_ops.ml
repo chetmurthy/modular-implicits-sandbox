@@ -299,10 +299,13 @@ implicit module Str : (ZERO_SUBSCRIPTABLE with type item_t = Char.t and type t =
     { it = s ; cur = 0 }
 end
 
-module type FUNCTION = sig
-  type dom_t
-  type rng_t
+module type TYPE = sig
+  type t
 end
+
+implicit module TYPEint = struct type t = int end ;;
+implicit module TYPEfloat = struct type t = float end ;;
+implicit module TYPEcomplex = struct type t = Complex.t end ;;
 
 module type MAP_ITERATOR = sig
   type dom_t
@@ -312,15 +315,6 @@ module type MAP_ITERATOR = sig
   val make : I.t -> (dom_t -> rng_t) -> t
 end
 
-module type TYPE = sig
-  type t
-end
-
-implicit module TYPEint = struct type t = int end ;;
-(*
-implicit module TYPEfloat = struct type t = float end ;;
-implicit module TYPEcomplex = struct type t = Complex.t end ;;
- *)
 module MapIterator (DOM : TYPE)(RNG : TYPE)(I : (BASIC_ITERATOR with type item_t = DOM.t))
        : (MAP_ITERATOR with type dom_t = DOM.t and
                             type rng_t = RNG.t and
@@ -376,3 +370,38 @@ end
 
 let sum {S : ITERATOR_SUM} ii =
   S.sum ii
+
+module type FILTER_ITERATOR = sig
+  module I : BASIC_ITERATOR
+  include (BASIC_ITERATOR with type item_t = I.item_t)
+  val make : I.t -> (I.item_t -> bool) -> t
+end
+
+module FilterIterator(I : BASIC_ITERATOR)
+       : (FILTER_ITERATOR with module I = I) =
+  struct
+    implicit module I = I
+    module Basic = struct
+    type t = {
+        it : I.t ;
+        pred : I.item_t -> bool
+      }
+    type item_t = I.item_t
+    let rec next it =
+      match I.next it.it with
+        None -> None
+      | Some arg ->
+         if it.pred arg then
+           Some arg
+         else next it
+    end
+(*
+    module Full = FullIterator(Basic)
+    include Full
+ *)
+    include Basic
+    let make (ii : I.t) pred = Basic.{ it = ii ; pred = pred }
+  end
+
+let filter {F : FILTER_ITERATOR} (ii : F.I.t) (pred : F.item_t -> bool) =
+  F.make ii pred

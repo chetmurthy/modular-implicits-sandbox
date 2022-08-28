@@ -504,3 +504,23 @@ module IteratorFold (DOM : TYPE)(RNG : TYPE) (I : (BASIC_ITERATOR with type item
       | Some v -> frec (f acc v)
     in frec acc
 end
+
+module type FROM_CONVERTER = sig
+  type src_t
+  type dst_t
+  val convert : src_t -> dst_t
+end
+
+let from {C : FROM_CONVERTER} (x : C.src_t) = C.convert x
+
+implicit module IntFromString : (FROM_CONVERTER with type src_t = string and type dst_t = int) = struct
+  type src_t = string
+  type dst_t = int
+  let convert = int_of_string
+end
+
+implicit module FloatFromString : (FROM_CONVERTER with type src_t = string and type dst_t = float) = struct
+  type src_t = string
+  type dst_t = float
+  let convert = float_of_string
+end

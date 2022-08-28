@@ -41,6 +41,11 @@ RF.fold 0 (fun x y -> x + y) ii ;;
 fold 0 (fun x y -> x + y) ii ;;
  *)
 
+let n : int = from "1";;
+(from "1" : int) ;;
+let n : float = from "1";;
+(from "1" : float) ;;
+
 (*
 ;;; Local Variables: ***
 ;;; mode:tuareg ***

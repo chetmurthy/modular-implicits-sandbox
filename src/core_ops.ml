@@ -460,7 +460,7 @@ module IteratorCollectVector (I : BASIC_ITERATOR) (Z : (ZERO with type t = I.ite
       | Some v ->
          Vector.push acc v ;
          srec ()
-    in srec () ; acc
+    in srec ()
 end
 
 
@@ -476,4 +476,31 @@ module IteratorCollectList (I : BASIC_ITERATOR) (Z : (ZERO with type t = I.item_
       | Some v ->
          srec (v::revacc)
     in srec []
+end
+
+module type ITERATOR_FOLD = sig
+  type dom_t
+  type rng_t
+  module I : (BASIC_ITERATOR with type item_t = dom_t)
+  type t = rng_t
+  val fold : t -> (t -> I.item_t -> t) -> I.t -> t
+end
+
+let fold {F : ITERATOR_FOLD} acc f ii =
+  F.fold acc f ii
+
+module IteratorFold (DOM : TYPE)(RNG : TYPE) (I : (BASIC_ITERATOR with type item_t = DOM.t))
+       : (ITERATOR_FOLD with type dom_t = DOM.t and
+                             type rng_t = RNG.t and
+                             module I = I)
+  = struct
+  type dom_t = DOM.t
+  type rng_t = RNG.t
+  type t = rng_t
+  module I = I
+  let fold acc f (ii : I.t) =
+    let rec frec acc = match I.next ii with
+        None -> acc
+      | Some v -> frec (f acc v)
+    in frec acc
 end

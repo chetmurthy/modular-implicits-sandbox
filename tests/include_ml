@@ -33,6 +33,11 @@ let r = Range.make 0 10 ;;
 let ii = iter {Range} r ;;
 let (l : int list) = collect ii ;;
 
+implicit module RF = IteratorFold(TYPEint)(TYPEint)(RangeIterator) ;;
+let r = Range.make 0 10 ;;
+let ii = iter {Range} r ;;
+RF.fold 0 (fun x y -> x + y) ii ;;
+
 (*
 ;;; Local Variables: ***
 ;;; mode:tuareg ***

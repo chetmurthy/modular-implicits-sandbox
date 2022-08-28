@@ -37,6 +37,9 @@ let (l : int list) = collect ii ;;
 let r = Range.make ~end_inclusive:true 0 10 ;;
 let ii = iter {Range} r ;;
 RF.fold 0 (fun x y -> x + y) ii ;;
+(*
+fold 0 (fun x y -> x + y) ii ;;
+ *)
 
 (*
 ;;; Local Variables: ***

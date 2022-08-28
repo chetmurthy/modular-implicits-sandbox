@@ -333,6 +333,9 @@ implicit module IntVector = Vec(Zero_int)
 implicit module FloatVector = Vec(Zero_float)
 implicit module ComplexVector = Vec(Zero_complex)
 
+implicit module IntVectorIterator = IntVector.Iter
+implicit module FlaotVectorIterator = FloatVector.Iter
+
 type string_iterator_t = { it : string ; mutable cur : int }
 
 module Basic_string_iterator : (BASIC_ITERATOR with type item_t = Char.t and type t = string_iterator_t) = struct
@@ -367,22 +370,36 @@ module type FUNCTION = sig
 end
 
 module type MAP_ITERATOR = sig
-  module F : FUNCTION
-  module I : (BASIC_ITERATOR with type item_t = F.dom_t)
-  include (BASIC_ITERATOR with type item_t = F.rng_t)
-  val make : I.t -> (F.dom_t -> F.rng_t) -> t
+  type dom_t
+  type rng_t
+  module I : (BASIC_ITERATOR with type item_t = dom_t)
+  include (BASIC_ITERATOR with type item_t = rng_t)
+  val make : I.t -> (dom_t -> rng_t) -> t
 end
 
-module MapIterator (F : FUNCTION)(I : (BASIC_ITERATOR with type item_t = F.dom_t)) : (MAP_ITERATOR with module F = F and module I = I) =
+module type TYPE = sig
+  type t
+end
+
+implicit module TYPEint = struct type t = int end ;;
+(*
+implicit module TYPEfloat = struct type t = float end ;;
+implicit module TYPEcomplex = struct type t = Complex.t end ;;
+ *)
+module MapIterator (DOM : TYPE)(RNG : TYPE)(I : (BASIC_ITERATOR with type item_t = DOM.t))
+       : (MAP_ITERATOR with type dom_t = DOM.t and
+                            type rng_t = RNG.t and
+                            module I = I) =
   struct
-    module I = I
-    module F = F
+    type dom_t = DOM.t
+    type rng_t = RNG.t
+    implicit module I = I
     module Basic = struct
     type t = {
         it : I.t ;
-        f : F.dom_t -> F.rng_t
+        f : dom_t -> rng_t
       }
-    type item_t = F.rng_t
+    type item_t = rng_t
     let next it =
       match I.next it.it with
         None -> None
@@ -396,5 +413,5 @@ module MapIterator (F : FUNCTION)(I : (BASIC_ITERATOR with type item_t = F.dom_t
     let make (ii : I.t) f = Basic.{ it = ii ; f = f }
   end
 
-let map {M : MAP_ITERATOR} (ii : M.I.t) (f : M.F.dom_t -> M.F.rng_t) =
+let map {M : MAP_ITERATOR} (ii : M.I.t) (f : M.dom_t -> M.rng_t) =
   M.make ii f

@@ -436,3 +436,27 @@ implicit module Range = struct
 end
 
 implicit module RangeIterator = Range.Iter
+
+module type ITERATOR_COLLECT = sig
+  module I : BASIC_ITERATOR
+  module Z : (ZERO with type t = I.item_t)
+  val collect : I.t -> Z.t Vector.t
+end
+
+module IteratorCollect (I : BASIC_ITERATOR) (Z : (ZERO with type t = I.item_t))
+     : (ITERATOR_COLLECT with module I = I and module Z = Z)
+  = struct
+  module I = I
+  module Z = Z
+  let collect (ii : I.t) =
+    let acc = Vector.create (Z.zero()) in
+    let rec srec () = match I.next ii with
+        None -> acc
+      | Some v ->
+         Vector.push acc v ;
+         srec ()
+    in srec () ; acc
+end
+
+let collect {S : ITERATOR_COLLECT} ii =
+  S.collect ii

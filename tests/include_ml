@@ -19,6 +19,12 @@ let r = Range.make 0 10 ;;
 let ii = iter {Range} r ;;
 implicit module RS = IteratorSum(RangeIterator)(Ops_int) ;;
 sum ii ;;
+let r = Range.make 0 10 ;;
+let ii = iter {Range} r ;;
+implicit module RC = IteratorCollect(RangeIterator)(Ops_int) ;;
+let v = collect ii ;;
+Vector.to_list v ;;
+
 (*
 ;;; Local Variables: ***
 ;;; mode:tuareg ***

@@ -361,3 +361,40 @@ implicit module Str : (ZERO_SUBSCRIPTABLE with type item_t = Char.t and type t =
     { it = s ; cur = 0 }
 end
 
+module type FUNCTION = sig
+  type dom_t
+  type rng_t
+end
+
+module type MAP_ITERATOR = sig
+  module F : FUNCTION
+  module I : (BASIC_ITERATOR with type item_t = F.dom_t)
+  include (BASIC_ITERATOR with type item_t = F.rng_t)
+  val make : I.t -> (F.dom_t -> F.rng_t) -> t
+end
+
+module MapIterator (F : FUNCTION)(I : (BASIC_ITERATOR with type item_t = F.dom_t)) : (MAP_ITERATOR with module F = F and module I = I) =
+  struct
+    module I = I
+    module F = F
+    module Basic = struct
+    type t = {
+        it : I.t ;
+        f : F.dom_t -> F.rng_t
+      }
+    type item_t = F.rng_t
+    let next it =
+      match I.next it.it with
+        None -> None
+      | Some arg -> Some(it.f arg)
+    end
+(*
+    module Full = FullIterator(Basic)
+    include Full
+ *)
+    include Basic
+    let make (ii : I.t) f = Basic.{ it = ii ; f = f }
+  end
+
+let map {M : MAP_ITERATOR} (ii : M.I.t) (f : M.F.dom_t -> M.F.rng_t) =
+  M.make ii f

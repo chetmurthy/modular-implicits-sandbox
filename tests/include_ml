@@ -3,9 +3,15 @@
 #require "sandbox";;
 open Core_ops ;;
 
+let v = make [1;2;3];;
+let ii = iter v;;
+implicit module M = MapIterator (struct type dom_t = Core_ops.IntVector.Iter.item_t type rng_t = Core_ops.IntVector.Iter.item_t end)(Core_ops.IntVector.Iter) ;;
 
-
-
+let m = map ii (fun x -> x);;
+M.next m ;;
+M.next m ;;
+M.next m ;;
+M.next m ;;
 (*
 ;;; Local Variables: ***
 ;;; mode:tuareg ***

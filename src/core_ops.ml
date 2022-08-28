@@ -313,7 +313,7 @@ module type MAP_ITERATOR = sig
   type rng_t
   module I : (BASIC_ITERATOR with type item_t = dom_t)
   include (BASIC_ITERATOR with type item_t = rng_t)
-  val make : I.t -> (dom_t -> rng_t) -> t
+  val map : I.t -> (dom_t -> rng_t) -> t
 end
 
 module MapIterator (DOM : TYPE)(RNG : TYPE)(I : (BASIC_ITERATOR with type item_t = DOM.t))
@@ -340,11 +340,11 @@ module MapIterator (DOM : TYPE)(RNG : TYPE)(I : (BASIC_ITERATOR with type item_t
     include Full
  *)
     include Basic
-    let make (ii : I.t) f = Basic.{ it = ii ; f = f }
+    let map (ii : I.t) f = Basic.{ it = ii ; f = f }
   end
 
 let map {M : MAP_ITERATOR} (ii : M.I.t) (f : M.dom_t -> M.rng_t) =
-  M.make ii f
+  M.map ii f
 
 module type ADD_ZERO = sig
   include ADD
@@ -375,7 +375,7 @@ let sum {S : ITERATOR_SUM} ii =
 module type FILTER_ITERATOR = sig
   module I : BASIC_ITERATOR
   include (BASIC_ITERATOR with type item_t = I.item_t)
-  val make : I.t -> (I.item_t -> bool) -> t
+  val filter : I.t -> (I.item_t -> bool) -> t
 end
 
 module FilterIterator(I : BASIC_ITERATOR)
@@ -401,11 +401,11 @@ module FilterIterator(I : BASIC_ITERATOR)
     include Full
  *)
     include Basic
-    let make (ii : I.t) pred = Basic.{ it = ii ; pred = pred }
+    let filter (ii : I.t) pred = Basic.{ it = ii ; pred = pred }
   end
 
 let filter {F : FILTER_ITERATOR} (ii : F.I.t) (pred : F.item_t -> bool) =
-  F.make ii pred
+  F.filter ii pred
 
 implicit module Range = struct
   type t = { _start : int ;

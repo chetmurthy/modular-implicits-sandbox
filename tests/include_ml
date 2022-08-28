@@ -16,7 +16,7 @@ let ii = iter v;;
 (*
 let ii2 = filter (ii : F.I.t)  (fun x -> 0 = x mod 2);;
  *)
-let ii2 = F.make ii (fun x -> 0 = x mod 2) ;;
+let ii2 = F.filter ii (fun x -> 0 = x mod 2) ;;
 let m = map ii2 (fun x -> x * 2 );;
 sum m ;;
 
